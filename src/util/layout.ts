@@ -17,22 +17,66 @@ export function moveTo(root: ViewNode, target: Vector): ViewNode {
   return move(root, offset)
 }
 
+export function getNodeStyle(node: Node) {
+  return {
+    padding: `${config.textVerticalPadding}px ${config.textHorizontalPadding}px`,
+  }
+}
+
+export function getNodeStyleString(node: Node) {
+  return Object.entries(getNodeStyle(node)).map(([key, value]) => `${key}: ${value}`).join(';')
+}
+
 type ViewNodeWithHeight = Omit<ViewNode, 'children'> & { children: ViewNodeWithHeight[]; height: number }
+type UnresolvedViewNode = Omit<ViewNode, 'children' | 'size'> & { children: UnresolvedViewNode[]; size: () => Vector; }
 
 function withSize(root: Node): ViewNodeWithHeight {
-  const size = add(measureText(root.label), [20, 10])
-  const children = root.children.map(withSize)
 
-  // total height of this subtree
-  const height = Math.max(size[1], config.verticalSpan * (children.length - 1) + sumBy(children, 'height'))
+  const frag = new DocumentFragment()
 
-  return {
-    ...root,
-    children,
-    coord: [0, 0],  // dummy coord
-    size,
-    height
+  function getMeasurer(node: Node) {
+    const span = document.createElement('span')
+    span.setAttribute('style', `position: absolute; visibility: hidden; user-select: none; ${getNodeStyleString(node)}`)
+    span.innerText = node.label
+    frag.appendChild(span)
+    return span
   }
+
+  function helper(node: Node): UnresolvedViewNode {
+    const children = node.children.map(helper)
+
+    const measurer = getMeasurer(node)
+
+    return {
+      ...node,
+      children,
+      coord: [0, 0],  // dummy coord
+      size: () => {
+        const size = [measurer.clientWidth, measurer.clientHeight] as const
+        measurer.remove()
+        return size
+      },
+    }
+  }
+
+  function resolve(node: UnresolvedViewNode): ViewNodeWithHeight {
+    const children = node.children.map(resolve)
+    const size = node.size()
+
+    // total height of this subtree
+    const height = Math.max(size[1], config.verticalSpan * (children.length - 1) + sumBy(children, 'height'))
+
+    return {
+      ...node,
+      size,
+      height, 
+      children
+    }
+  }
+
+  const newRoot = helper(root)
+  document.body.appendChild(frag)
+  return resolve(newRoot)
 }
 
 function layOut(root: Node | Root, direction: NodeDirection): ViewNode {

@@ -7,8 +7,8 @@ export function MindMap(props: { root: Root }) {
   const { root } = props
   const viewRoot = useMemo(() => layOutRoot(root), [root])
   return (
-    <svg viewBox="-300 -300 600 600" xmlns="http://www.w3.org/2000/svg">
+    <div style={{ transform: 'translate(300px, 300px)' }}>
       <Node node={viewRoot} />
-    </svg>
+    </div>
   )
 }

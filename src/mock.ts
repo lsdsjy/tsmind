@@ -8,7 +8,7 @@ const node: ViewRoot = {
   coord: [0, 0],
   children: [
     {
-      label: 'sub2',
+      label: 'sup2',
       id: 'sub2',
       direction: 'right',
       expanded: false,
@@ -38,8 +38,8 @@ const node: ViewRoot = {
       ]
     },
     {
-      label: 'sub1',
-      id: 'sub1',
+      label: 'sub5',
+      id: 'sub5',
       direction: 'right',
       expanded: false,
       coord: [300, 20],

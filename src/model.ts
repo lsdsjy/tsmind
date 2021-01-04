@@ -1,6 +1,6 @@
 export type NodeDirection = 'left' | 'right'
 
-export interface Node {
+export interface Child {
   id: string
   label: string
   children: Node[]
@@ -8,18 +8,20 @@ export interface Node {
   direction: NodeDirection
 }
 
-export type Root = Omit<Node, 'id' | 'expanded' | 'direction'> & {
+export type Root = Omit<Child, 'id' | 'expanded' | 'direction'> & {
   id: 'root',
   expanded: true,  // dummy properties
   direction: 'right'
 }
 
+export type Node = Root | Child
+
 export type Vector = readonly [x: number, y: number]
 
 export type Point = Vector
 
-export type ViewNode<T extends Node | Root = Node> = Omit<T, 'children'> & {
-  children: ViewNode<Node>[]
+export type ViewNode<T extends Node = Child> = Omit<T, 'children'> & {
+  children: ViewNode<Child>[]
   coord: Point
   size: Vector
 }
