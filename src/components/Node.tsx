@@ -44,7 +44,7 @@ const NodeBody = React.memo(function (props: Props) {
       sel.removeAllRanges()
       sel.addRange(range!)
     }
-  }, [start])
+  }, [start, editing])
 
   return (
     <div
