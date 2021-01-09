@@ -1,17 +1,25 @@
 import produce from 'immer'
-import React, { useLayoutEffect, useRef, useState } from 'react'
-import { ViewNode } from '../model'
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Node as NodeModel, ViewNode } from '../model'
 import { getNodeStyle } from '../util/layout'
+import { isRoot, newNode } from '../util/node'
 import { Connect } from './Connect'
 
-interface Props {
+interface NodeBodyProps {
   node: ViewNode
   onChange: (newNode: ViewNode) => void
-  editing?: boolean
+  onBlur: () => void
+  editing: boolean
+}
+
+interface NodeProps {
+  node: ViewNode
+  onChange: (newNode: ViewNode) => void
+  onCreateSibling: (newNode: NodeModel) => void
 }
 
 // persist caret position
-const NodeBody = React.memo(function (props: Props) {
+const NodeBody = React.memo(function (props: NodeBodyProps) {
   const { node, editing } = props
   const [start, setStart] = useState(node.label.length)
   const el = useRef<HTMLDivElement | null>(null)
@@ -39,10 +47,13 @@ const NodeBody = React.memo(function (props: Props) {
       // editable div occasionally have 2 text children, one empty
       // find the real one to restore caret position
       const target = Array.from(el.current.childNodes).find((node) => node.nodeValue)
-      range?.setStart(target!, start)
-      range?.setEnd(target!, start)
-      sel.removeAllRanges()
-      sel.addRange(range!)
+      // when a node has no text, target would be undefined
+      if (target) {
+        range?.setStart(target!, start)
+        range?.setEnd(target!, start)
+        sel.removeAllRanges()
+        sel.addRange(range!)
+      }
     }
   }, [start, editing])
 
@@ -53,6 +64,7 @@ const NodeBody = React.memo(function (props: Props) {
       contentEditable={editing}
       style={style}
       suppressContentEditableWarning
+      onBlur={props.onBlur}
       onInput={(e) =>
         props.onChange(
           produce(node, (node) => {
@@ -62,20 +74,31 @@ const NodeBody = React.memo(function (props: Props) {
         )
       }
     >
-      {node.label}
+      {node.label || ' ' /* use a space to visualize editing */}
     </div>
   )
 })
 
-export const Node = React.memo(function (props: Omit<Props, 'editing'>) {
-  const [editing, setEditing] = useState(false)
+export const Node = React.memo(function (props: NodeProps) {
   const { node } = props
+  const [editing, setEditing] = useState(false)
+  const exitEditing = useCallback(() => setEditing(false), [])
 
-  function onChildChange(index: number) {
+  function mutateChild(index: number) {
     return (newNode: ViewNode) => {
       props.onChange(
         produce(node, (node) => {
           node.children[index] = newNode as any
+        })
+      )
+    }
+  }
+
+  function createSibling(index: number) {
+    return (newNode: NodeModel) => {
+      props.onChange(
+        produce(node, (node) => {
+          node.children.splice(index, 0, newNode as any)
         })
       )
     }
@@ -86,24 +109,29 @@ export const Node = React.memo(function (props: Omit<Props, 'editing'>) {
       {node.children.map((child, i) => (
         <div key={child.id}>
           <Connect parent={node} child={child} />
-          <Node node={child} onChange={onChildChange(i)} />
+          <Node node={child} onChange={mutateChild(i)} onCreateSibling={createSibling(i)} />
         </div>
       ))}
       <div
+        className="node-wrap"
         onKeyPressCapture={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
-            setEditing(false)
+            if (editing) {
+              setEditing(false)
+            } else if (!isRoot(node)) {
+              props.onCreateSibling(newNode(node.direction))
+            }
           }
         }}
-        onBlur={() => setEditing(false)}
+        tabIndex={-1}
         onDoubleClick={() => {
           if (!editing) {
             setEditing(true)
           }
         }}
       >
-        <NodeBody editing={editing} node={node} onChange={props.onChange}></NodeBody>
+        <NodeBody editing={editing} node={node} onBlur={exitEditing} onChange={props.onChange}></NodeBody>
       </div>
     </>
   )
