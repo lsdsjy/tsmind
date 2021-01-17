@@ -92,24 +92,28 @@ export const Node = React.memo(function (props: NodeProps) {
     freshNodes.delete(node.id)
   }, [])
 
+  function modifySelf(recipe: (node: ViewNode) => void) {
+    props.onChange(produce(node, recipe))
+  }
+
   function mutateChild(index: number) {
-    return (newNode: ViewNode) => {
-      props.onChange(
-        produce(node, (node) => {
-          node.children[index] = newNode as any
-        })
-      )
-    }
+    return (newNode: ViewNode) => modifySelf((node) => {
+      node.children[index] = newNode as any
+    })
   }
 
   function createSibling(index: number) {
-    return (newNode: NodeModel) => {
-      props.onChange(
-        produce(node, (node) => {
-          node.children.splice(index, 0, newNode as any)
-        })
-      )
-    }
+    return (newNode: NodeModel) => modifySelf((node) => {
+      node.children.splice(index, 0, newNode as any)
+    })
+  }
+
+  function createChild() {
+    const nn = newNode(node.direction)
+    freshNodes.add(nn.id)
+    modifySelf((node) => {
+      node.children.push(nn as any)
+    })
   }
 
   return (
@@ -127,10 +131,16 @@ export const Node = React.memo(function (props: NodeProps) {
             e.preventDefault()
             if (editing) {
               setEditing(false)
-            } else if (!isRoot(node)) {
-              const nn = newNode(node.direction)
-              freshNodes.add(nn.id)
-              props.onCreateSibling(nn)
+            } else {
+              if (!e.shiftKey) {
+                if (isRoot(node)) return
+                const nn = newNode(node.direction)
+                freshNodes.add(nn.id)
+                props.onCreateSibling(nn)
+              } else {
+                console.error('asdf')
+                createChild()
+              }
             }
           }
         }}
