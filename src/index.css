@@ -17,3 +17,7 @@ code {
   user-select: none;
   text-align: center;
 }
+
+.node-wrap:focus .node {
+  background-color: aliceblue !important;
+}

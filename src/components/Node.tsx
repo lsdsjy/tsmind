@@ -1,9 +1,12 @@
 import produce from 'immer'
-import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Node as NodeModel, ViewNode } from '../model'
 import { getNodeStyle } from '../util/layout'
 import { isRoot, newNode } from '../util/node'
 import { Connect } from './Connect'
+
+// records freshly created node
+const freshNodes = new Set<NodeModel['id']>()
 
 interface NodeBodyProps {
   node: ViewNode
@@ -81,8 +84,13 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
 
 export const Node = React.memo(function (props: NodeProps) {
   const { node } = props
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(freshNodes.has(node.id))
   const exitEditing = useCallback(() => setEditing(false), [])
+
+  useEffect(() => {
+    // synchronously delete will make NodeBody editing=false, no idea why
+    freshNodes.delete(node.id)
+  }, [])
 
   function mutateChild(index: number) {
     return (newNode: ViewNode) => {
@@ -120,7 +128,9 @@ export const Node = React.memo(function (props: NodeProps) {
             if (editing) {
               setEditing(false)
             } else if (!isRoot(node)) {
-              props.onCreateSibling(newNode(node.direction))
+              const nn = newNode(node.direction)
+              freshNodes.add(nn.id)
+              props.onCreateSibling(nn)
             }
           }
         }}
