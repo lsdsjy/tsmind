@@ -6,6 +6,7 @@ export interface Child {
   children: Node[]
   expanded: boolean
   direction: NodeDirection
+  outline?: boolean
 }
 
 export type Root = Omit<Child, 'id' | 'expanded' | 'direction'> & {

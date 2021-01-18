@@ -8,7 +8,7 @@ export function MindMap(props: { root: Root; onChange: (root: Root) => void }) {
   const viewRoot = useMemo(() => layOutRoot(root), [root])
   return (
     <div style={{ transform: 'translate(300px, 300px)' }}>
-      <Node onCreateSibling={() => {}} node={viewRoot} onChange={(newRoot) => props.onChange(newRoot as Root)} />
+      <Node node={viewRoot} path={[]} />
     </div>
   )
 }

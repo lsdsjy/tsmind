@@ -3,6 +3,7 @@ import './App.css'
 import { MindMap } from './components/Map'
 import mockRoot from './mock'
 import { Root } from './model'
+import { RootContext } from './root-context'
 
 let undoStack: Root[] = []
 let redoStack: Root[] = []
@@ -33,11 +34,13 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <button onClick={undo}>undo</button>
-      <button onClick={redo}>redo</button>
-      <MindMap root={root} onChange={update} />
-    </div>
+    <RootContext.Provider value={{ root, setRoot }}>
+      <div className="App">
+        <button onClick={undo}>undo</button>
+        <button onClick={redo}>redo</button>
+        <MindMap root={root} onChange={update} />
+      </div>
+    </RootContext.Provider>
   )
 }
 

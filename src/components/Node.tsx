@@ -1,6 +1,7 @@
-import produce from 'immer'
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { append, assocPath, init, insert, last, lensPath, over } from 'ramda'
+import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Node as NodeModel, ViewNode } from '../model'
+import { RootContext } from '../root-context'
 import { getNodeStyle } from '../util/layout'
 import { isRoot, newNode } from '../util/node'
 import { Connect } from './Connect'
@@ -10,15 +11,14 @@ const freshNodes = new Set<NodeModel['id']>()
 
 interface NodeBodyProps {
   node: ViewNode
-  onChange: (newNode: ViewNode) => void
+  onChange: (newNode: NodeModel) => void
   onBlur: () => void
   editing: boolean
 }
 
 interface NodeProps {
   node: ViewNode
-  onChange: (newNode: ViewNode) => void
-  onCreateSibling: (newNode: NodeModel) => void
+  path: (string | number)[]
 }
 
 // persist caret position
@@ -68,14 +68,10 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
       style={style}
       suppressContentEditableWarning
       onBlur={props.onBlur}
-      onInput={(e) =>
-        props.onChange(
-          produce(node, (node) => {
-            node.label = e.currentTarget.innerText
-            saveCaret()
-          })
-        )
-      }
+      onInput={(e) => {
+        saveCaret()
+        props.onChange({ ...node, label: e.currentTarget.innerText })
+      }}
     >
       {node.label || ' ' /* use a space to visualize editing */}
     </div>
@@ -83,37 +79,24 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
 })
 
 export const Node = React.memo(function (props: NodeProps) {
-  const { node } = props
+  const { node, path } = props
   const [editing, setEditing] = useState(freshNodes.has(node.id))
   const exitEditing = useCallback(() => setEditing(false), [])
+  const { root, setRoot } = useContext(RootContext)
 
   useEffect(() => {
     // synchronously delete will make NodeBody editing=false, no idea why
     freshNodes.delete(node.id)
   }, [])
 
-  function modifySelf(recipe: (node: ViewNode) => void) {
-    props.onChange(produce(node, recipe))
-  }
-
-  function mutateChild(index: number) {
-    return (newNode: ViewNode) => modifySelf((node) => {
-      node.children[index] = newNode as any
-    })
-  }
-
-  function createSibling(index: number) {
-    return (newNode: NodeModel) => modifySelf((node) => {
-      node.children.splice(index, 0, newNode as any)
-    })
+  function modifySelf(node: NodeModel) {
+    setRoot(assocPath(path, node, root))
   }
 
   function createChild() {
     const nn = newNode(node.direction)
     freshNodes.add(nn.id)
-    modifySelf((node) => {
-      node.children.push(nn as any)
-    })
+    setRoot(over(lensPath(path.concat('children')), append(nn), root))
   }
 
   return (
@@ -121,7 +104,7 @@ export const Node = React.memo(function (props: NodeProps) {
       {node.children.map((child, i) => (
         <div key={child.id}>
           <Connect parent={node} child={child} />
-          <Node node={child} onChange={mutateChild(i)} onCreateSibling={createSibling(i)} />
+          <Node node={child} path={props.path.concat('children', i)} />
         </div>
       ))}
       <div
@@ -136,9 +119,8 @@ export const Node = React.memo(function (props: NodeProps) {
                 if (isRoot(node)) return
                 const nn = newNode(node.direction)
                 freshNodes.add(nn.id)
-                props.onCreateSibling(nn)
+                setRoot(over(lensPath(init(path)), insert(last(path) as number, nn), root))
               } else {
-                console.error('asdf')
                 createChild()
               }
             }
@@ -151,7 +133,7 @@ export const Node = React.memo(function (props: NodeProps) {
           }
         }}
       >
-        <NodeBody editing={editing} node={node} onBlur={exitEditing} onChange={props.onChange}></NodeBody>
+        <NodeBody editing={editing} node={node} onBlur={exitEditing} onChange={modifySelf}></NodeBody>
       </div>
     </>
   )
