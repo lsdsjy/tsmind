@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react'
-import { Root, ViewNode } from '../model'
+import { TreeNode } from '../model'
 import { layOutRoot } from '../util/layout'
 import { Node } from './Node'
 
-export function MindMap(props: { root: Root; onChange: (root: Root) => void }) {
+export function MindMap(props: { root: TreeNode; onChange: (root: TreeNode) => void }) {
   const { root } = props
-  const viewRoot = useMemo(() => layOutRoot(root), [root])
+  const rootView = useMemo(() => layOutRoot(root), [root])
   return (
     <div style={{ transform: 'translate(300px, 300px)' }}>
-      <Node node={viewRoot} path={[]} />
+      <Node node={rootView} path={[]} />
     </div>
   )
 }

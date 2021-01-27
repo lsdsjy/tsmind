@@ -1,6 +1,6 @@
 import React from 'react'
 import { config } from '../config'
-import { Point, ViewNode } from '../model'
+import { Point, TreeNodeView } from '../model'
 import { add, repr, sub } from '../util/point'
 
 const Shape = React.memo(function (props: { a: Point; b: Point }) {
@@ -26,7 +26,7 @@ const Shape = React.memo(function (props: { a: Point; b: Point }) {
   )
 })
 
-export const Connect = React.memo(function (props: { parent: ViewNode; child: ViewNode }) {
+export const Connect = React.memo(function (props: { parent: TreeNodeView; child: TreeNodeView }) {
   const { parent, child } = props
   return (
     <Shape

@@ -1,15 +1,16 @@
-import { Node, NodeDirection, Root } from '../model'
+import { NodeDirection, TreeNode, TreeNodeView } from '../model'
 
-export function isRoot(node: Node): node is Root {
-  return node.id === 'root'
+export function isRoot(node: TreeNode | TreeNodeView) {
+  return !!node.root
 }
 
 export function newId() {
   return Math.random().toString(36).slice(2)
 }
 
-export function newNode(direction: NodeDirection, label = ''): Node {
+export function newNode(direction: NodeDirection, root = false, label = ''): TreeNode {
   return {
+    root,
     id: newId(),
     label,
     direction,

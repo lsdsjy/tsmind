@@ -1,40 +1,25 @@
 import { sumBy } from 'lodash-es'
 import { config } from '../config'
-import { Node, NodeDirection, Root, Vector, ViewNode, ViewRoot } from '../model'
-import { measureText } from './measure'
-import { add, sub, translate } from './point'
+import { NodeDirection, TreeNode, TreeNodeView, Vector } from '../model'
 
-export function move(root: ViewNode, offset: Vector): ViewNode {
-  return {
-    ...root,
-    coord: translate(root.coord, offset),
-    children: root.children.map((node) => move(node, offset)),
-  }
-}
-
-export function moveTo(root: ViewNode, target: Vector): ViewNode {
-  const offset = sub(target, root.coord)
-  return move(root, offset)
-}
-
-export function getNodeStyle(node: Node) {
+export function getNodeStyle(node: TreeNode) {
   return {
     padding: `${config.textVerticalPadding}px ${config.textHorizontalPadding}px`,
   }
 }
 
-export function getNodeStyleString(node: Node) {
+export function getNodeStyleString(node: TreeNode) {
   return Object.entries(getNodeStyle(node)).map(([key, value]) => `${key}: ${value}`).join(';')
 }
 
-type ViewNodeWithHeight = Omit<ViewNode, 'children'> & { children: ViewNodeWithHeight[]; height: number }
-type UnresolvedViewNode = Omit<ViewNode, 'children' | 'size'> & { children: UnresolvedViewNode[]; size: () => Vector; }
+type ViewNodeWithHeight = Omit<TreeNodeView, 'children'> & { children: ViewNodeWithHeight[]; height: number }
+type UnresolvedViewNode = Omit<TreeNodeView, 'children' | 'size'> & { children: UnresolvedViewNode[]; size: () => Vector; }
 
-function withSize(root: Node): ViewNodeWithHeight {
+function withSize(root: TreeNode): ViewNodeWithHeight {
 
   const frag = new DocumentFragment()
 
-  function getMeasurer(node: Node) {
+  function getMeasurer(node: TreeNode) {
     const span = document.createElement('span')
     span.setAttribute('style', `position: absolute; visibility: hidden; user-select: none; ${getNodeStyleString(node)}`)
     span.innerText = node.label
@@ -42,7 +27,7 @@ function withSize(root: Node): ViewNodeWithHeight {
     return span
   }
 
-  function helper(node: Node): UnresolvedViewNode {
+  function helper(node: TreeNode): UnresolvedViewNode {
     const children = node.children.map(helper)
 
     const measurer = getMeasurer(node)
@@ -79,8 +64,8 @@ function withSize(root: Node): ViewNodeWithHeight {
   return resolve(newRoot)
 }
 
-function layOut(root: Node | Root, direction: NodeDirection): ViewNode {
-  function layOutInternal(root: ViewNodeWithHeight): ViewNode {
+function layOut(root: TreeNode, direction: NodeDirection): TreeNodeView {
+  function layOutInternal(root: ViewNodeWithHeight): TreeNodeView {
     
     // records total height of nodes above current node
     let accHeight = 0
@@ -101,8 +86,8 @@ function layOut(root: Node | Root, direction: NodeDirection): ViewNode {
   return layOutInternal(withSize(root))
 }
 
-export function layOutRoot(root: Root): ViewRoot {
-  const onlyDirection = (direction: NodeDirection) => layOut({ ...root, children: root.children.filter(node => node.direction === direction) }, direction) as ViewRoot
+export function layOutRoot(root: TreeNode): TreeNodeView {
+  const onlyDirection = (direction: NodeDirection) => layOut({ ...root, children: root.children.filter(node => node.direction === direction) }, direction)
   const right = onlyDirection('right')
   return {
     ...right,

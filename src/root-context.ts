@@ -1,7 +1,7 @@
 import { createContext } from 'react'
-import { Root } from './model'
+import { TreeNode } from './model'
 
 export const RootContext = createContext({
-  root: null! as Root,
-  setRoot: (root: Root) => {}
+  root: null! as TreeNode,
+  setRoot: (_: TreeNode) => {}
 })

@@ -2,23 +2,24 @@ import { append, assocPath, init, insert, last, lensPath, over } from 'ramda'
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Node as NodeModel, ViewNode } from '../model'
 import { RootContext } from '../root-context'
+import { NodeId, NodePath, TreeNode, TreeNodeView } from '../model'
 import { getNodeStyle } from '../util/layout'
 import { isRoot, newNode } from '../util/node'
 import { Connect } from './Connect'
 
 // records freshly created node
-const freshNodes = new Set<NodeModel['id']>()
+const freshNodes = new Set<NodeId>()
 
 interface NodeBodyProps {
-  node: ViewNode
-  onChange: (newNode: NodeModel) => void
+  node: TreeNodeView
+  onChange: (newNode: TreeNode) => void
   onBlur: () => void
   editing: boolean
 }
 
 interface NodeProps {
-  node: ViewNode
-  path: (string | number)[]
+  node: TreeNodeView
+  path: NodePath
 }
 
 // persist caret position
@@ -89,7 +90,7 @@ export const Node = React.memo(function (props: NodeProps) {
     freshNodes.delete(node.id)
   }, [])
 
-  function modifySelf(node: NodeModel) {
+  function modifySelf(node: TreeNode) {
     setRoot(assocPath(path, node, root))
   }
 

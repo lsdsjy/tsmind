@@ -2,16 +2,16 @@ import React, { useState } from 'react'
 import './App.css'
 import { MindMap } from './components/Map'
 import mockRoot from './mock'
-import { Root } from './model'
+import { TreeNode } from './model'
 import { RootContext } from './root-context'
 
-let undoStack: Root[] = []
-let redoStack: Root[] = []
+let undoStack: TreeNode[] = []
+let redoStack: TreeNode[] = []
 
 function App() {
-  const [root, setRoot] = useState(mockRoot as Root)
+  const [root, setRoot] = useState(mockRoot)
 
-  function update(newRoot: Root) {
+  function update(newRoot: TreeNode) {
     undoStack.push(root)
     redoStack = []
     setRoot(newRoot)
