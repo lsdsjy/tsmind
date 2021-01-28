@@ -2,11 +2,6 @@ export type NodeDirection = 'left' | 'right'
 
 export type NodeId = string
 
-/**
- * path from root to some descendant
- */
-export type NodePath = (string | number)[]
-
 export interface TreeNode {
   root?: boolean
   id: NodeId
@@ -14,6 +9,7 @@ export interface TreeNode {
   children: TreeNode[]
   expanded: boolean
   direction: NodeDirection
+  dropPreview?: boolean
   outline?: boolean
 }
 
@@ -26,3 +22,12 @@ export type TreeNodeView = Omit<TreeNode, 'children'> & {
   coord: Point
   size: Vector
 }
+
+export interface Canvas {
+  roots: TreeNode[]
+}
+
+/**
+ * path from canvas to some node
+ */
+export type NodePath = (string | number)[]

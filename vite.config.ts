@@ -5,5 +5,8 @@ export default defineConfig({
   build: {
     base: '/tsmind/'
   },
+  optimizeDeps: {
+    include: ['rxjs/operators']
+  },
   plugins: [reactRefresh()]
 })

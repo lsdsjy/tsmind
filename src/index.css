@@ -21,3 +21,7 @@ code {
 .node-wrap:focus .node {
   background-color: aliceblue !important;
 }
+
+.drop-preview {
+  opacity: 0.5;
+}

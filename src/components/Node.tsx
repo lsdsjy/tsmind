@@ -1,10 +1,11 @@
 import { append, assocPath, init, insert, last, lensPath, over } from 'ramda'
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Node as NodeModel, ViewNode } from '../model'
+import { DndContext } from '../dnd-context'
+import { NodeId, NodePath, Point, TreeNode, TreeNodeView } from '../model'
 import { RootContext } from '../root-context'
-import { NodeId, NodePath, TreeNode, TreeNodeView } from '../model'
 import { getNodeStyle } from '../util/layout'
 import { isRoot, newNode } from '../util/node'
+import { add, sub } from '../util/point'
 import { Connect } from './Connect'
 
 // records freshly created node
@@ -20,6 +21,7 @@ interface NodeBodyProps {
 interface NodeProps {
   node: TreeNodeView
   path: NodePath
+  getCoord: (cx: number, cy: number) => Point
 }
 
 // persist caret position
@@ -28,12 +30,9 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
   const [start, setStart] = useState(node.label.length)
   const el = useRef<HTMLDivElement | null>(null)
 
-  const [x, y] = [node.coord[0] - node.size[0] / 2, node.coord[1] - node.size[1] / 2]
   const style = {
     ...getNodeStyle(node),
     height: node.size[1],
-    top: y,
-    left: x,
     border: '1px solid black',
     borderRadius: '5px',
     lineHeight: `${node.size[1]}px`,
@@ -80,10 +79,11 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
 })
 
 export const Node = React.memo(function (props: NodeProps) {
-  const { node, path } = props
+  const { node, path, getCoord } = props
   const [editing, setEditing] = useState(freshNodes.has(node.id))
   const exitEditing = useCallback(() => setEditing(false), [])
   const { root, setRoot } = useContext(RootContext)
+  const { startDragging } = useContext(DndContext)
 
   useEffect(() => {
     // synchronously delete will make NodeBody editing=false, no idea why
@@ -100,16 +100,23 @@ export const Node = React.memo(function (props: NodeProps) {
     setRoot(over(lensPath(path.concat('children')), append(nn), root))
   }
 
+  const [x, y] = [node.coord[0] - node.size[0] / 2, node.coord[1] - node.size[1] / 2]
+
   return (
     <>
       {node.children.map((child, i) => (
-        <div key={child.id}>
+        <div key={child.id} className={child.dropPreview ? 'drop-preview' : ''}>
           <Connect parent={node} child={child} />
-          <Node node={child} path={props.path.concat('children', i)} />
+          <Node
+            getCoord={getCoord}
+            node={child}
+            path={path.concat('children', i)}
+          />
         </div>
       ))}
       <div
         className="node-wrap"
+        style={{ position: 'absolute', top: y, left: x }}
         onKeyPressCapture={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
@@ -128,6 +135,10 @@ export const Node = React.memo(function (props: NodeProps) {
           }
         }}
         tabIndex={-1}
+        onMouseDown={(e) => {
+          const offset = sub(node.coord, getCoord(e.clientX, e.clientY))
+          startDragging(props.path, (x: number, y: number) => add(getCoord(x, y), offset))
+        }}
         onDoubleClick={() => {
           if (!editing) {
             setEditing(true)
