@@ -1,6 +1,6 @@
 import { sumBy } from 'lodash-es'
 import { config } from '../config'
-import { NodeDirection, TreeNode, TreeNodeView, Vector } from '../model'
+import { Canvas, CanvasView, NodeDirection, TreeNode, TreeNodeView, Vector } from '../model'
 
 export function getNodeStyle(node: TreeNode) {
   return {
@@ -33,9 +33,9 @@ function withSize(root: TreeNode): ViewNodeWithHeight {
     const measurer = getMeasurer(node)
 
     return {
+      coord: [0, 0],  // dummy coord, would be overwritten by root coord
       ...node,
       children,
-      coord: [0, 0],  // dummy coord
       size: () => {
         const size = [measurer.clientWidth, measurer.clientHeight] as const
         measurer.remove()
@@ -92,5 +92,11 @@ export function layOutRoot(root: TreeNode): TreeNodeView {
   return {
     ...right,
     children: right.children.concat(onlyDirection('left').children)
+  }
+}
+
+export function layOutCanvas(canvas: Canvas): CanvasView {
+  return {
+    children: canvas.children.map(layOutRoot)
   }
 }

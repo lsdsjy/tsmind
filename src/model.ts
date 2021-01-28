@@ -4,6 +4,7 @@ export type NodeId = string
 
 export interface TreeNode {
   root?: boolean
+  coord?: Point
   id: NodeId
   label: string
   children: TreeNode[]
@@ -24,10 +25,19 @@ export type TreeNodeView = Omit<TreeNode, 'children'> & {
 }
 
 export interface Canvas {
-  roots: TreeNode[]
+  /**
+   * children of canvas are isolated trees
+   */
+  children: TreeNode[]
+}
+
+export type CanvasView = Omit<Canvas, 'children'> & {
+  children: TreeNodeView[]
+  dragSource?: TreeNodeView
+  dropTarget?: NodePath
 }
 
 /**
  * path from canvas to some node
  */
-export type NodePath = (string | number)[]
+export type NodePath = number[]

@@ -1,128 +1,128 @@
 import { isEqual } from 'lodash-es'
-import { assocPath, init, insert, last, lensPath, over, path as pathGet, remove, view } from 'ramda'
+import { useForceUpdate } from 'observable-hooks'
+import { append, assocPath, lensProp, over } from 'ramda'
 import React, { useCallback, useMemo, useState } from 'react'
-import { concat, fromEvent, Observable, of } from 'rxjs'
-import { distinctUntilChanged, filter, last as takeLast, map, startWith, takeUntil, tap } from 'rxjs/operators'
+import { fromEvent, Observable } from 'rxjs'
+import { distinctUntilChanged, last, map, materialize, skipWhile, takeUntil, tap } from 'rxjs/operators'
 import './App.css'
+import { CanvasContext } from './canvas-context'
 import { MindMap } from './components/Map'
 import { DndContext } from './dnd-context'
-import mockRoot from './mock'
-import { NodePath, TreeNode, TreeNodeView, Vector } from './model'
-import { RootContext } from './root-context'
+import mockCanvas from './mock'
+import { Canvas, CanvasView, NodePath, Point, TreeNodeView, Vector } from './model'
 import { getDropTarget } from './util/dnd'
-import { layOutRoot } from './util/layout'
+import { layOutCanvas } from './util/layout'
+import { pathDelete, pathGet, pathInsert } from './util/path'
+import { edist } from './util/point'
+import { tapOnce } from './util/tap-once'
 
 const mousemove$: Observable<MouseEvent> = fromEvent(document, 'mousemove') as any
 const mouseup$ = fromEvent(document, 'mouseup')
 
-let undoStack: TreeNode[] = []
-let redoStack: TreeNode[] = []
+let undoStack: Canvas[] = []
+let redoStack: Canvas[] = []
 
 /**
  * 相当于 useRef
  */
-let previewState: TreeNodeView | undefined
+let preview: CanvasView | undefined
 
 function App() {
-  const [root, setRoot] = useState(mockRoot)
-  const [dragSource, setDragSource] = useState<TreeNodeView>()
-  const [dropTargetPath, setDropTargetPath] = useState<NodePath>()
-  const rootView = useMemo(() => layOutRoot(root), [root])
-  const [preview, setPreview] = useState<TreeNodeView>()
+  const [canvas, setCanvas] = useState(mockCanvas)
+  const view = useMemo(() => layOutCanvas(canvas), [canvas])
+  const forceUpdate = useForceUpdate()
+
+  function setPreview(value: typeof preview) {
+    preview = value
+    forceUpdate()
+  }
 
   const startDragging = useCallback(
-    (path: NodePath, getCoord: (x: number, y: number) => Vector) => {
-      const lens = lensPath(path)
-      const source = view(lens, rootView) as TreeNodeView
-      setDragSource(source)
-      const dragCoord$ = concat(
-        mousemove$.pipe(
-          takeUntil(mouseup$),
-          map((e) => getCoord(e.clientX, e.clientY))
-        ),
-        of(undefined)
+    (path: NodePath, getCoord: (x: number, y: number) => Vector, start: Point) => {
+      const source = pathGet(view, path) as TreeNodeView
+
+      const dragCoord$ = mousemove$.pipe(
+        takeUntil(mouseup$),
+        skipWhile((e) => edist([e.clientX, e.clientY], start) < 10),
+        tapOnce(() => {
+          setPreview({ ...view, dragSource: { ...source, children: [] } })
+        }),
+        map((e) => getCoord(e.clientX, e.clientY))
       )
+
       dragCoord$.subscribe((coord) => {
-        if (coord) {
-          setDragSource((node) => ({ ...node!, coord }))
-        }
+        setPreview(assocPath(['dragSource', 'coord'], coord, preview))
       })
+
       dragCoord$
         .pipe(
-          filter((coord) => !!coord) as any,
-          map((coord: Vector) => previewState && getDropTarget(previewState, coord)),
+          map((coord) => getDropTarget(preview!, coord)),
           distinctUntilChanged((a, b) => isEqual(a, b)),
-          startWith(undefined),
           tap((target) => {
-            let previewRoot = over(lensPath(init(path)), remove(last(path) as number, 1), root)
+            let previewCanvas = pathDelete(canvas, path)
             if (target) {
-              const childrenPath = init(target)
-              if (!pathGet(childrenPath, previewRoot)) {
-                previewRoot = assocPath(childrenPath, [], previewRoot)
-              }
-              previewRoot = over(
-                lensPath(childrenPath),
-                insert(last(target) as number, { ...source, children: [], dropPreview: true }),
-                previewRoot
-              )
+              previewCanvas = pathInsert(previewCanvas, target, {
+                ...source,
+                children: [],
+                dropPreview: true,
+                root: undefined,
+              })
             }
-            previewState = layOutRoot(previewRoot)
-            setPreview(previewState)
-            setDropTargetPath(target)
+            setPreview({ ...preview, ...layOutCanvas(previewCanvas), dropTarget: target })
           }),
-          takeLast()
+          last(),
+          materialize()
         )
-        .subscribe((target) => {
-          if (target) {
-            setRoot((root) => {
-              let newRoot = over(lensPath(init(path)), remove(last(path) as number, 1), root)
-              return over(lensPath(init(target)), insert(last(target) as number, source), newRoot)
+        .subscribe((notification) => {
+          if (notification.kind === 'N') {
+            setCanvas((oldCanvas) => {
+              const canvas = pathDelete(oldCanvas, path)
+              const target = notification.value
+              if (target) {
+                return pathInsert(canvas, target, source)
+              } else {
+                return over(lensProp('children'), append({ ...preview!.dragSource!, root: true }), canvas)
+              }
             })
           }
           setPreview(undefined)
-          setDragSource(undefined)
-          setDropTargetPath(undefined)
         })
     },
-    [root]
+    [canvas]
   )
 
-  function update(newRoot: TreeNode) {
-    undoStack.push(root)
+  function update(newRoot: Canvas) {
+    undoStack.push(canvas)
     redoStack = []
-    setRoot(newRoot)
+    return setCanvas(newRoot)
   }
 
   function undo() {
     const last = undoStack.pop()
     if (last) {
-      redoStack.push(root)
-      setRoot(last)
+      redoStack.push(canvas)
+      setCanvas(last)
     }
   }
 
   function redo() {
     const next = redoStack.pop()
     if (next) {
-      undoStack.push(root)
-      setRoot(next)
+      undoStack.push(canvas)
+      setCanvas(next)
     }
   }
 
   return (
-    <RootContext.Provider value={{ root, setRoot }}>
+    <CanvasContext.Provider value={{ canvas, setCanvas: update }}>
       <DndContext.Provider value={{ startDragging }}>
         <div className="App">
           <button onClick={undo}>undo</button>
           <button onClick={redo}>redo</button>
-          <MindMap
-            root={preview ?? rootView}
-            onChange={update}
-            dragSource={preview && dragSource && !dropTargetPath ? { ...dragSource, children: [] } : undefined}
-          />
+          <MindMap canvas={preview ?? view} />
         </div>
       </DndContext.Provider>
-    </RootContext.Provider>
+    </CanvasContext.Provider>
   )
 }
 

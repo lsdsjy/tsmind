@@ -1,10 +1,11 @@
-import { append, assocPath, init, insert, last, lensPath, over } from 'ramda'
+import { assocPath } from 'ramda'
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { CanvasContext } from '../canvas-context'
 import { DndContext } from '../dnd-context'
 import { NodeId, NodePath, Point, TreeNode, TreeNodeView } from '../model'
-import { RootContext } from '../root-context'
 import { getNodeStyle } from '../util/layout'
 import { isRoot, newNode } from '../util/node'
+import { pathAppend, pathInsert } from '../util/path'
 import { add, sub } from '../util/point'
 import { Connect } from './Connect'
 
@@ -82,7 +83,7 @@ export const Node = React.memo(function (props: NodeProps) {
   const { node, path, getCoord } = props
   const [editing, setEditing] = useState(freshNodes.has(node.id))
   const exitEditing = useCallback(() => setEditing(false), [])
-  const { root, setRoot } = useContext(RootContext)
+  const { canvas, setCanvas } = useContext(CanvasContext)
   const { startDragging } = useContext(DndContext)
 
   useEffect(() => {
@@ -91,13 +92,13 @@ export const Node = React.memo(function (props: NodeProps) {
   }, [])
 
   function modifySelf(node: TreeNode) {
-    setRoot(assocPath(path, node, root))
+    setCanvas(assocPath(path, node, canvas))
   }
 
   function createChild() {
     const nn = newNode(node.direction)
     freshNodes.add(nn.id)
-    setRoot(over(lensPath(path.concat('children')), append(nn), root))
+    setCanvas(pathAppend(canvas, path, nn))
   }
 
   const [x, y] = [node.coord[0] - node.size[0] / 2, node.coord[1] - node.size[1] / 2]
@@ -107,11 +108,7 @@ export const Node = React.memo(function (props: NodeProps) {
       {node.children.map((child, i) => (
         <div key={child.id} className={child.dropPreview ? 'drop-preview' : ''}>
           <Connect parent={node} child={child} />
-          <Node
-            getCoord={getCoord}
-            node={child}
-            path={path.concat('children', i)}
-          />
+          <Node getCoord={getCoord} node={child} path={[...path, i]} />
         </div>
       ))}
       <div
@@ -127,7 +124,7 @@ export const Node = React.memo(function (props: NodeProps) {
                 if (isRoot(node)) return
                 const nn = newNode(node.direction)
                 freshNodes.add(nn.id)
-                setRoot(over(lensPath(init(path)), insert(last(path) as number, nn), root))
+                setCanvas(pathInsert(canvas, path, nn))
               } else {
                 createChild()
               }
@@ -137,7 +134,7 @@ export const Node = React.memo(function (props: NodeProps) {
         tabIndex={-1}
         onMouseDown={(e) => {
           const offset = sub(node.coord, getCoord(e.clientX, e.clientY))
-          startDragging(props.path, (x: number, y: number) => add(getCoord(x, y), offset))
+          startDragging(props.path, (x: number, y: number) => add(getCoord(x, y), offset), [e.clientX, e.clientY])
         }}
         onDoubleClick={() => {
           if (!editing) {
