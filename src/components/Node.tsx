@@ -5,7 +5,7 @@ import { DndContext } from '../dnd-context'
 import { NodeId, NodePath, Point, TreeNode, TreeNodeView } from '../model'
 import { getNodeStyle } from '../util/layout'
 import { isRoot, newNode } from '../util/node'
-import { pathAppend, pathInsert } from '../util/path'
+import { pathAppend, pathInsert, pathSet } from '../util/path'
 import { add, sub } from '../util/point'
 import { Connect } from './Connect'
 
@@ -92,7 +92,7 @@ export const Node = React.memo(function (props: NodeProps) {
   }, [])
 
   function modifySelf(node: TreeNode) {
-    setCanvas(assocPath(path, node, canvas))
+    setCanvas(pathSet(canvas, path, node))
   }
 
   function createChild() {

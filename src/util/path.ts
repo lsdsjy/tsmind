@@ -1,5 +1,5 @@
 import { flatMap } from 'lodash-es'
-import { append, init, insert, last, lensPath, over, remove, path as ramdaPath } from 'ramda'
+import { append, init, insert, last, lensPath, over, remove, path as ramdaPath, assocPath } from 'ramda'
 import { Canvas, CanvasView, NodePath } from '../model'
 
 type ElementType<T> = T extends (infer U)[] ? U : never
@@ -26,6 +26,10 @@ export function pathInsert<T extends Canvas | CanvasView>(canvas: T, path: NodeP
 
 export function pathGet<T extends Canvas | CanvasView>(canvas: T, path: NodePath) {
   return ramdaPath(interpolatedPath(path), canvas)
+}
+
+export function pathSet<T extends Canvas | CanvasView>(canvas: T, path: NodePath, node: ElementType<T['children']>) {
+  return assocPath(interpolatedPath(path), node, canvas)
 }
 
 export function pathDelete<T extends Canvas | CanvasView>(canvas: T, path: NodePath) {
