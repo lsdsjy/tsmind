@@ -1,5 +1,5 @@
 import { flatMap } from 'lodash-es'
-import { append, init, insert, last, lensPath, over, remove, path as ramdaPath, assocPath } from 'ramda'
+import { append, init, insert, last, lensPath, over, path as ramdaPath, remove } from 'ramda'
 import { Canvas, CanvasView, NodePath } from '../model'
 
 type ElementType<T> = T extends (infer U)[] ? U : never
@@ -19,7 +19,17 @@ function splitInterpolate(path: NodePath): readonly [('children' | number)[], nu
   return split(interpolatedPath(path)) as any
 }
 
-export function pathInsert<T extends Canvas | CanvasView>(canvas: T, path: NodePath, node: ElementType<T['children']>) {
+type NodeType<T extends Canvas | CanvasView> = ElementType<T['children']>
+
+export function pathOver<T extends Canvas | CanvasView>(
+  canvas: T,
+  path: NodePath,
+  fn: (original: NodeType<T>) => NodeType<T>
+) {
+  return over(lensPath(interpolatedPath(path)), fn, canvas)
+}
+
+export function pathInsert<T extends Canvas | CanvasView>(canvas: T, path: NodePath, node: NodeType<T>) {
   const [children, index] = splitInterpolate(path)
   return over(lensPath(children), insert(index, node), canvas)
 }
@@ -28,8 +38,8 @@ export function pathGet<T extends Canvas | CanvasView>(canvas: T, path: NodePath
   return ramdaPath(interpolatedPath(path), canvas)
 }
 
-export function pathSet<T extends Canvas | CanvasView>(canvas: T, path: NodePath, node: ElementType<T['children']>) {
-  return assocPath(interpolatedPath(path), node, canvas)
+export function pathSet<T extends Canvas | CanvasView>(canvas: T, path: NodePath, node: NodeType<T>) {
+  return pathOver(canvas, path, () => node)
 }
 
 export function pathDelete<T extends Canvas | CanvasView>(canvas: T, path: NodePath) {
@@ -37,6 +47,6 @@ export function pathDelete<T extends Canvas | CanvasView>(canvas: T, path: NodeP
   return over(lensPath(children), remove(index, 1), canvas)
 }
 
-export function pathAppend<T extends Canvas | CanvasView>(canvas: T, path: NodePath, node: ElementType<T['children']>) {
+export function pathAppend<T extends Canvas | CanvasView>(canvas: T, path: NodePath, node: NodeType<T>) {
   return over(lensPath(interpolatedPath(path).concat('children')), append(node), canvas)
 }

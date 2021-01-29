@@ -1,5 +1,5 @@
 import { useForceUpdate } from 'observable-hooks'
-import { append, lensProp, over } from 'ramda'
+import { append, init, lensProp, over } from 'ramda'
 import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { fromEvent, Observable } from 'rxjs'
 import { last, map, materialize, skipWhile, takeUntil, tap } from 'rxjs/operators'
@@ -11,7 +11,7 @@ import mockCanvas from './mock'
 import { Canvas, CanvasView, NodePath, Point, TreeNodeView, Vector } from './model'
 import { getDropTarget } from './util/dnd'
 import { layOutCanvas } from './util/layout'
-import { pathDelete, pathGet, pathInsert } from './util/path'
+import { pathDelete, pathGet, pathInsert, pathOver } from './util/path'
 import { edist } from './util/point'
 
 const mousemove$: Observable<MouseEvent> = fromEvent(document, 'mousemove') as any
@@ -66,9 +66,10 @@ function App() {
         .subscribe((notification) => {
           if (notification.kind === 'N') {
             update((oldCanvas) => {
-              const canvas = pathDelete(oldCanvas, path)
+              let canvas = pathDelete(oldCanvas, path)
               const [, target] = notification.value!
               if (target) {
+                canvas = pathOver(canvas, init(target), (parent) => ({ ...parent, expanded: true }))
                 return pathInsert(canvas, target, source)
               } else {
                 return over(

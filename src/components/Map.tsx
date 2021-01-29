@@ -28,6 +28,7 @@ export function MindMap(props: { canvas: CanvasView }) {
         }
       }}
       onDoubleClick={(e) => {
+        if (e.target !== ref.current) return
         e.preventDefault()
         setCanvas(
           over(

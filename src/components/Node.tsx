@@ -80,7 +80,7 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
 })
 
 export const Node = React.memo(function (props: NodeProps) {
-  const { node, path, getCoord } = props
+  let { node, path, getCoord } = props
   const [editing, setEditing] = useState(freshNodes.has(node.id))
   const exitEditing = useCallback(() => setEditing(false), [])
   const { canvas, setCanvas } = useContext(CanvasContext)
@@ -91,6 +91,8 @@ export const Node = React.memo(function (props: NodeProps) {
     // synchronously delete will make NodeBody editing=false, no idea why
     freshNodes.delete(node.id)
   }, [])
+
+  node = { ...node, expanded: node.expanded || node.children.some((child) => child.dropPreview) }
 
   function modifySelf(node: TreeNode) {
     setCanvas(pathSet(canvas, path, node))
@@ -107,12 +109,18 @@ export const Node = React.memo(function (props: NodeProps) {
 
   return (
     <>
-      {node.children.map((child, i) => (
-        <div key={child.id} className={child.dropPreview ? 'drop-preview' : ''}>
-          <Connect parent={node} child={child} />
-          <Node getCoord={getCoord} node={child} path={[...path, i]} />
-        </div>
-      ))}
+      <Connect
+        parent={node}
+        toggle={() => {
+          modifySelf({ ...node, expanded: !node.expanded })
+        }}
+      />
+      {node.expanded &&
+        node.children.map((child, i) => (
+          <div key={child.id} className={child.dropPreview ? 'drop-preview' : ''}>
+            <Node getCoord={getCoord} node={child} path={[...path, i]} />
+          </div>
+        ))}
       <div
         ref={el}
         className="node-wrap"
