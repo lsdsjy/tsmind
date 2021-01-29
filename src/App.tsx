@@ -1,9 +1,8 @@
-import { isEqual } from 'lodash-es'
 import { useForceUpdate } from 'observable-hooks'
-import { append, assocPath, lensProp, over } from 'ramda'
-import React, { useCallback, useMemo, useState } from 'react'
+import { append, lensProp, over } from 'ramda'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { fromEvent, Observable } from 'rxjs'
-import { distinctUntilChanged, last, map, materialize, skipWhile, takeUntil, tap } from 'rxjs/operators'
+import { last, map, materialize, skipWhile, takeUntil, tap } from 'rxjs/operators'
 import './App.css'
 import { CanvasContext } from './canvas-context'
 import { MindMap } from './components/Map'
@@ -14,7 +13,6 @@ import { getDropTarget } from './util/dnd'
 import { layOutCanvas } from './util/layout'
 import { pathDelete, pathGet, pathInsert } from './util/path'
 import { edist } from './util/point'
-import { tapOnce } from './util/tap-once'
 
 const mousemove$: Observable<MouseEvent> = fromEvent(document, 'mousemove') as any
 const mouseup$ = fromEvent(document, 'mouseup')
@@ -22,18 +20,14 @@ const mouseup$ = fromEvent(document, 'mouseup')
 let undoStack: Canvas[] = []
 let redoStack: Canvas[] = []
 
-/**
- * 相当于 useRef
- */
-let preview: CanvasView | undefined
-
 function App() {
   const [canvas, setCanvas] = useState(mockCanvas)
   const view = useMemo(() => layOutCanvas(canvas), [canvas])
+  const preview = useRef<CanvasView>()
   const forceUpdate = useForceUpdate()
 
-  function setPreview(value: typeof preview) {
-    preview = value
+  function setPreview(value: typeof preview['current']) {
+    preview.current = value
     forceUpdate()
   }
 
@@ -44,21 +38,13 @@ function App() {
       const dragCoord$ = mousemove$.pipe(
         takeUntil(mouseup$),
         skipWhile((e) => edist([e.clientX, e.clientY], start) < 10),
-        tapOnce(() => {
-          setPreview({ ...view, dragSource: { ...source, children: [] } })
-        }),
         map((e) => getCoord(e.clientX, e.clientY))
       )
 
-      dragCoord$.subscribe((coord) => {
-        setPreview(assocPath(['dragSource', 'coord'], coord, preview))
-      })
-
       dragCoord$
         .pipe(
-          map((coord) => getDropTarget(preview!, coord)),
-          distinctUntilChanged((a, b) => isEqual(a, b)),
-          tap((target) => {
+          map((coord) => [coord, getDropTarget(preview.current ?? pathDelete(view, path), coord)] as const),
+          tap(([coord, target]) => {
             let previewCanvas = pathDelete(canvas, path)
             if (target) {
               previewCanvas = pathInsert(previewCanvas, target, {
@@ -68,20 +54,24 @@ function App() {
                 root: undefined,
               })
             }
-            setPreview({ ...preview, ...layOutCanvas(previewCanvas), dropTarget: target })
+            setPreview({
+              ...layOutCanvas(previewCanvas),
+              dragSource: { ...source, coord, children: [] },
+              dropTarget: target,
+            })
           }),
           last(),
           materialize()
         )
         .subscribe((notification) => {
           if (notification.kind === 'N') {
-            setCanvas((oldCanvas) => {
+            update((oldCanvas) => {
               const canvas = pathDelete(oldCanvas, path)
-              const target = notification.value
+              const [, target] = notification.value!
               if (target) {
                 return pathInsert(canvas, target, source)
               } else {
-                return over(lensProp('children'), append({ ...preview!.dragSource!, root: true }), canvas)
+                return over(lensProp('children'), append({ ...preview.current!.dragSource, root: true }), canvas)
               }
             })
           }
@@ -91,10 +81,10 @@ function App() {
     [canvas]
   )
 
-  function update(newRoot: Canvas) {
+  const update: typeof setCanvas = (args: any) => {
     undoStack.push(canvas)
     redoStack = []
-    return setCanvas(newRoot)
+    return setCanvas(args)
   }
 
   function undo() {
@@ -119,7 +109,7 @@ function App() {
         <div className="App">
           <button onClick={undo}>undo</button>
           <button onClick={redo}>redo</button>
-          <MindMap canvas={preview ?? view} />
+          <MindMap canvas={preview.current ?? view} />
         </div>
       </DndContext.Provider>
     </CanvasContext.Provider>
