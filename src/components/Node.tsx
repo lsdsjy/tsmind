@@ -85,6 +85,7 @@ export const Node = React.memo(function (props: NodeProps) {
   const exitEditing = useCallback(() => setEditing(false), [])
   const { canvas, setCanvas } = useContext(CanvasContext)
   const { startDragging } = useContext(DndContext)
+  const el = useRef<HTMLDivElement>(null!)
 
   useEffect(() => {
     // synchronously delete will make NodeBody editing=false, no idea why
@@ -112,6 +113,7 @@ export const Node = React.memo(function (props: NodeProps) {
         </div>
       ))}
       <div
+        ref={el}
         className="node-wrap"
         style={{ position: 'absolute', top: y, left: x }}
         onKeyDown={(e) => {
@@ -119,6 +121,7 @@ export const Node = React.memo(function (props: NodeProps) {
             e.preventDefault()
             if (editing) {
               setEditing(false)
+              el.current.focus()
             } else {
               if (isRoot(node)) return
               const nn = newNode(node.direction)
