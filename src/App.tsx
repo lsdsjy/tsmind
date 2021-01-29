@@ -71,7 +71,11 @@ function App() {
               if (target) {
                 return pathInsert(canvas, target, source)
               } else {
-                return over(lensProp('children'), append({ ...preview.current!.dragSource, root: true }), canvas)
+                return over(
+                  lensProp('children'),
+                  append({ ...source, coord: preview.current!.dragSource!.coord, root: true }),
+                  canvas
+                )
               }
             })
           }
