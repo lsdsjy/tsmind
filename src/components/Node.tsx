@@ -99,7 +99,8 @@ export const Node = React.memo(function (props: NodeProps) {
   function createChild() {
     const nn = newNode({ direction: node.direction })
     freshNodes.add(nn.id)
-    setCanvas(pathAppend(canvas, path, nn))
+    const expanded = pathSet(canvas, path, { ...node, expanded: true })
+    setCanvas(pathAppend(expanded, path, nn))
   }
 
   const [x, y] = sub(node.coord, mul(node.size, 0.5))
