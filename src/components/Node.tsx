@@ -6,7 +6,7 @@ import { NodeId, NodePath, Point, TreeNode, TreeNodeView } from '../model'
 import { getNodeStyle } from '../util/layout'
 import { isRoot, newNode } from '../util/node'
 import { pathAppend, pathInsert, pathSet } from '../util/path'
-import { add, sub } from '../util/point'
+import { add, mul, sub } from '../util/point'
 import { Connect } from './Connect'
 
 // records freshly created node
@@ -101,7 +101,7 @@ export const Node = React.memo(function (props: NodeProps) {
     setCanvas(pathAppend(canvas, path, nn))
   }
 
-  const [x, y] = [node.coord[0] - node.size[0] / 2, node.coord[1] - node.size[1] / 2]
+  const [x, y] = sub(node.coord, mul(node.size, 0.5))
 
   return (
     <>
@@ -114,21 +114,21 @@ export const Node = React.memo(function (props: NodeProps) {
       <div
         className="node-wrap"
         style={{ position: 'absolute', top: y, left: x }}
-        onKeyPressCapture={(e) => {
+        onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
             if (editing) {
               setEditing(false)
             } else {
-              if (!e.shiftKey) {
-                if (isRoot(node)) return
-                const nn = newNode(node.direction)
-                freshNodes.add(nn.id)
-                setCanvas(pathInsert(canvas, path, nn))
-              } else {
-                createChild()
-              }
+              if (isRoot(node)) return
+              const nn = newNode(node.direction)
+              freshNodes.add(nn.id)
+              setCanvas(pathInsert(canvas, path, nn))
             }
+          } else if (e.key === 'Tab') {
+            e.preventDefault()
+            setEditing(false)
+            createChild()
           }
         }}
         tabIndex={-1}
