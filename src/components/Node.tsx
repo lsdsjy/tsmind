@@ -1,5 +1,4 @@
-import { assocPath } from 'ramda'
-import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { CSSProperties, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CanvasContext } from '../canvas-context'
 import { DndContext } from '../dnd-context'
 import { NodeId, NodePath, Point, TreeNode, TreeNodeView } from '../model'
@@ -31,13 +30,14 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
   const [start, setStart] = useState(node.label.length)
   const el = useRef<HTMLDivElement | null>(null)
 
-  const style = {
+  const style: CSSProperties = {
     ...getNodeStyle(node),
     height: node.size[1],
     border: '1px solid black',
     borderRadius: '5px',
     lineHeight: `${node.size[1]}px`,
     backgroundColor: 'white',
+    whiteSpace: 'nowrap',
   }
 
   function saveCaret() {
@@ -97,7 +97,7 @@ export const Node = React.memo(function (props: NodeProps) {
   }
 
   function createChild() {
-    const nn = newNode(node.direction)
+    const nn = newNode({ direction: node.direction })
     freshNodes.add(nn.id)
     setCanvas(pathAppend(canvas, path, nn))
   }
@@ -124,7 +124,7 @@ export const Node = React.memo(function (props: NodeProps) {
               el.current.focus()
             } else {
               if (isRoot(node)) return
-              const nn = newNode(node.direction)
+              const nn = newNode()
               freshNodes.add(nn.id)
               setCanvas(pathInsert(canvas, path, nn))
             }
@@ -139,7 +139,8 @@ export const Node = React.memo(function (props: NodeProps) {
           const offset = sub(node.coord, getCoord(e.clientX, e.clientY))
           startDragging(props.path, (x: number, y: number) => add(getCoord(x, y), offset), [e.clientX, e.clientY])
         }}
-        onDoubleClick={() => {
+        onDoubleClick={(e) => {
+          e.stopPropagation()
           if (!editing) {
             setEditing(true)
           }

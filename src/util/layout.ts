@@ -21,7 +21,7 @@ function withSize(root: TreeNode): ViewNodeWithHeight {
 
   function getMeasurer(node: TreeNode) {
     const span = document.createElement('span')
-    span.setAttribute('style', `position: absolute; visibility: hidden; user-select: none; ${getNodeStyleString(node)}`)
+    span.setAttribute('style', `position: absolute; visibility: hidden; user-select: none; white-space: no-wrap; ${getNodeStyleString(node)}`)
     span.innerText = node.label
     frag.appendChild(span)
     return span
