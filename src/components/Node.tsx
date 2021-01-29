@@ -123,7 +123,9 @@ export const Node = React.memo(function (props: NodeProps) {
               setEditing(false)
               el.current.focus()
             } else {
-              if (isRoot(node)) return
+              if (isRoot(node)) {
+                return createChild()
+              }
               const nn = newNode()
               freshNodes.add(nn.id)
               setCanvas(pathInsert(canvas, path, nn))
