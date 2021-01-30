@@ -15,7 +15,12 @@ export function getNodeStyleString(node: TreeNode) {
 type ViewNodeWithHeight = Omit<TreeNodeView, 'children'> & { children: ViewNodeWithHeight[]; height: number }
 type UnresolvedViewNode = Omit<TreeNodeView, 'children' | 'size'> & { children: UnresolvedViewNode[]; size: () => Vector; }
 
+const memo = new WeakMap<TreeNode, ViewNodeWithHeight>()
+
 function withSize(root: TreeNode): ViewNodeWithHeight {
+  if (memo.has(root)) {
+    return memo.get(root)!
+  }
 
   const frag = new DocumentFragment()
 
@@ -61,7 +66,9 @@ function withSize(root: TreeNode): ViewNodeWithHeight {
 
   const newRoot = helper(root)
   document.body.appendChild(frag)
-  return resolve(newRoot)
+  const resolved = resolve(newRoot)
+  memo.set(root, resolved)
+  return resolved
 }
 
 function layOut(root: TreeNode, direction: NodeDirection): TreeNodeView {
