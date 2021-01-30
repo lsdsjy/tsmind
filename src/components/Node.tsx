@@ -1,7 +1,9 @@
 import React, { CSSProperties, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { takeUntil } from 'rxjs/operators'
 import { CanvasContext } from '../canvas-context'
 import { DndContext } from '../dnd-context'
 import { NodeId, NodePath, Point, TreeNode, TreeNodeView } from '../model'
+import { mousemove$, mouseup$ } from '../util/event'
 import { getNodeStyle } from '../util/layout'
 import { isRoot, newNode } from '../util/node'
 import { pathAppend, pathInsert, pathSet } from '../util/path'
@@ -30,16 +32,6 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
   const [start, setStart] = useState(node.label.length)
   const el = useRef<HTMLDivElement | null>(null)
 
-  const style: CSSProperties = {
-    ...getNodeStyle(node),
-    height: node.size[1],
-    border: '1px solid black',
-    borderRadius: '5px',
-    lineHeight: `${node.size[1]}px`,
-    backgroundColor: 'white',
-    whiteSpace: 'nowrap',
-  }
-
   function saveCaret() {
     setStart(window.getSelection()?.getRangeAt(0).startOffset ?? 0)
   }
@@ -64,9 +56,8 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
   return (
     <div
       ref={el}
-      className="node"
+      className="editor"
       contentEditable={editing}
-      style={style}
       suppressContentEditableWarning
       onBlur={props.onBlur}
       onInput={(e) => {
@@ -107,6 +98,16 @@ export const Node = React.memo(function (props: NodeProps) {
 
   const [x, y] = sub(node.coord, mul(node.size, 0.5))
 
+  const style: CSSProperties = {
+    ...getNodeStyle(node),
+    display: 'flex',
+    alignItems: 'center',
+    top: y,
+    left: x,
+    width: node.size[0],
+    height: node.size[1],
+  }
+
   return (
     <>
       <Connect
@@ -123,8 +124,8 @@ export const Node = React.memo(function (props: NodeProps) {
         ))}
       <div
         ref={el}
-        className="node-wrap"
-        style={{ position: 'absolute', top: y, left: x }}
+        className="node-wrap node"
+        style={style}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
@@ -147,16 +148,33 @@ export const Node = React.memo(function (props: NodeProps) {
         }}
         tabIndex={-1}
         onMouseDown={(e) => {
+          if (editing) return
           const offset = sub(node.coord, getCoord(e.clientX, e.clientY))
           startDragging(props.path, (x: number, y: number) => add(getCoord(x, y), offset), [e.clientX, e.clientY])
         }}
         onDoubleClick={(e) => {
+          if (editing) return
           e.stopPropagation()
           if (!editing) {
             setEditing(true)
           }
         }}
       >
+        <div
+          className="resizer"
+          onMouseDown={(e) => {
+            e.stopPropagation()
+            const startX = e.clientX
+            const initialWidth = el.current.getBoundingClientRect().width
+            mousemove$.pipe(takeUntil(mouseup$)).subscribe((e) => {
+              if (e.clientX - startX < 10) {
+                return
+              }
+              const newWidth = initialWidth + e.clientX - startX
+              setCanvas((canvas) => pathSet(canvas, path, { ...node, fixedWidth: newWidth }))
+            })
+          }}
+        ></div>
         <NodeBody editing={editing} node={node} onBlur={exitEditing} onChange={modifySelf}></NodeBody>
       </div>
     </>

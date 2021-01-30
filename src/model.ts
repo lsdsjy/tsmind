@@ -10,8 +10,8 @@ export interface TreeNode {
   children: TreeNode[]
   expanded: boolean
   direction: NodeDirection
+  fixedWidth?: number
   dropPreview?: boolean
-  outline?: boolean
 }
 
 export type Vector = readonly [x: number, y: number]

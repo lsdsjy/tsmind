@@ -1,7 +1,6 @@
 import { useForceUpdate } from 'observable-hooks'
 import { append, init, lensProp, over } from 'ramda'
 import React, { useCallback, useMemo, useRef, useState } from 'react'
-import { fromEvent, Observable } from 'rxjs'
 import { last, map, materialize, skipWhile, takeUntil, tap } from 'rxjs/operators'
 import './App.css'
 import { CanvasContext } from './canvas-context'
@@ -10,12 +9,10 @@ import { DndContext } from './dnd-context'
 import mockCanvas from './mock'
 import { Canvas, CanvasView, NodePath, Point, TreeNodeView, Vector } from './model'
 import { getDropTarget } from './util/dnd'
+import { mousemove$, mouseup$ } from './util/event'
 import { layOutCanvas } from './util/layout'
 import { pathDelete, pathGet, pathInsert, pathOver } from './util/path'
 import { edist } from './util/point'
-
-const mousemove$: Observable<MouseEvent> = fromEvent(document, 'mousemove') as any
-const mouseup$ = fromEvent(document, 'mouseup')
 
 let undoStack: Canvas[] = []
 let redoStack: Canvas[] = []
