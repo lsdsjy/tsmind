@@ -167,10 +167,10 @@ export const Node = React.memo(function (props: NodeProps) {
             const startX = e.clientX
             const initialWidth = el.current.getBoundingClientRect().width
             mousemove$.pipe(takeUntil(mouseup$)).subscribe((e) => {
-              if (e.clientX - startX < 10) {
+              const newWidth = initialWidth + e.clientX - startX
+              if (newWidth < 10) {
                 return
               }
-              const newWidth = initialWidth + e.clientX - startX
               setCanvas((canvas) => pathSet(canvas, path, { ...node, fixedWidth: newWidth }))
             })
           }}
