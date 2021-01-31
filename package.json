@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "start": "vite",
+    "watch": "tsc --noEmit --watch",
     "build": "tsc --noEmit && vite build"
   },
   "dependencies": {
