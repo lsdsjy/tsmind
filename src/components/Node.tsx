@@ -1,3 +1,4 @@
+import { findLastIndex, lensPath, over } from 'ramda'
 import React, { CSSProperties, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { takeUntil } from 'rxjs/operators'
 import { CanvasContext } from '../canvas-context'
@@ -6,7 +7,7 @@ import { NodeId, NodePath, Point, TreeNode, TreeNodeView } from '../model'
 import { mousemove$, mouseup$ } from '../util/event'
 import { getNodeStyle } from '../util/layout'
 import { isRoot, newNode } from '../util/node'
-import { pathAppend, pathInsert, pathSet } from '../util/path'
+import { pathAppend, pathInsert, pathOver, pathSet } from '../util/path'
 import { add, mul, sub } from '../util/point'
 import { Connect } from './Connect'
 
@@ -119,6 +120,58 @@ export const Node = React.memo(function (props: NodeProps) {
       {node.expanded &&
         node.children.map((child, i) => (
           <div key={child.id} className={child.dropPreview ? 'drop-preview' : ''}>
+            {child.summaries.map((summary, summaryIndex) => {
+              const { top, left, right, bottom } = summary.rect
+              return (
+                <div
+                  key={`${child.id}-${summary.count}`}
+                  style={{
+                    position: 'absolute',
+                    top: `${top}px`,
+                    left: `${left}px`,
+                    width: `${right - left}px`,
+                    height: `${bottom - top}px`,
+                    border: 'solid 2px black',
+                    boxSizing: 'border-box',
+                    userSelect: 'none',
+                    zIndex: -100,
+                  }}
+                >
+                  <div
+                    style={{ position: 'absolute', bottom: '-2px', height: '5px', cursor: 's-resize', width: '100%' }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      const childIndex = i
+                      const self = (e.target as HTMLDivElement).parentElement
+                      const startY = e.clientY
+                      const initialHeight = self!.getBoundingClientRect().height
+                      let endY = e.clientY
+                      mousemove$.pipe(takeUntil(mouseup$)).subscribe({
+                        next: (e) => {
+                          self!.style.height = `${e.clientY - startY + initialHeight}px`
+                          endY = e.clientY
+                        },
+                        complete: () => {
+                          const [, y] = getCoord(0, endY)
+                          const endIndex = Math.max(
+                            summaryIndex,
+                            findLastIndex((child) => child.coord[1] <= y, node.children)
+                          )
+                          setCanvas((canvas) =>
+                            pathOver(
+                              canvas,
+                              [...path, childIndex],
+                              over(lensPath(['summaries', summaryIndex, 'count']), () => endIndex - childIndex + 1)
+                            )
+                          )
+                        },
+                      })
+                    }}
+                  ></div>
+                  {summary.label}
+                </div>
+              )
+            })}
             <Node getCoord={getCoord} node={child} path={[...path, i]} />
           </div>
         ))}

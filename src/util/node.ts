@@ -21,6 +21,7 @@ export function newNode(opt: NewNodeOptions = {}): TreeNode {
     direction,
     expanded: true,
     children: [],
+    summaries: [],
     ...(opt.root ? { coord: opt.coord } : {}),
   }
 }

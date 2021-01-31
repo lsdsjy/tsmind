@@ -9,12 +9,14 @@ const data: Canvas = {
       direction: 'right',
       root: true,
       coord: [0, 0],
+      summaries: [],
       children: [
         {
           label: 'sup2',
           id: 'sub2',
           direction: 'right',
           expanded: false,
+          summaries: [{ count: 1, label: 'summ' }],
           children: [
             {
               label: 'sub4',
@@ -22,6 +24,7 @@ const data: Canvas = {
               direction: 'right',
               expanded: false,
               children: [],
+              summaries: [],
             },
             {
               label: 'sub3',
@@ -29,6 +32,7 @@ const data: Canvas = {
               direction: 'right',
               expanded: false,
               children: [],
+              summaries: [],
             },
           ],
         },
@@ -38,6 +42,7 @@ const data: Canvas = {
           direction: 'right',
           expanded: false,
           children: [],
+          summaries: [],
         },
         {
           label: 'sub1',
@@ -45,6 +50,7 @@ const data: Canvas = {
           direction: 'left',
           expanded: false,
           children: [],
+          summaries: [],
         },
       ],
     },

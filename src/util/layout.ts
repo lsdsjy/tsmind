@@ -1,7 +1,24 @@
 import { sumBy } from 'lodash-es'
 import { CSSProperties } from 'react'
 import { config } from '../config'
-import { Canvas, CanvasView, NodeDirection, TreeNode, TreeNodeView, Vector } from '../model'
+import { Canvas, CanvasView, NodeDirection, Point, Rect, TreeNode, TreeNodeView, Vector } from '../model'
+
+function surrounds(rs: Rect[]) {
+  function surround(a: Rect, b: Rect): Rect {
+    return {
+      top: Math.min(a.top, b.top),
+      left: Math.min(a.left, b.left),
+      bottom: Math.max(a.bottom, b.bottom),
+      right: Math.max(a.right, b.right),
+    }
+  }
+  return rs.reduce((acc, rect) => surround(acc, rect), {
+    top: Infinity,
+    left: Infinity,
+    right: -Infinity,
+    bottom: -Infinity,
+  })
+}
 
 export function getNodeStyle(node: TreeNode): CSSProperties {
   return {
@@ -24,15 +41,25 @@ export function getNodeStyle(node: TreeNode): CSSProperties {
   }
 }
 
-type ViewNodeWithHeight = Omit<TreeNodeView, 'children'> & { children: ViewNodeWithHeight[]; height: number }
-type UnresolvedViewNode = Omit<TreeNodeView, 'children' | 'size'> & {
-  children: UnresolvedViewNode[]
-  size: () => Vector
+type NodeWithHeight = Omit<TreeNode, 'children' | 'coord'> & {
+  /**
+   * subtree height
+   */
+  height: number
+  children: NodeWithHeight[]
+  coord: Point
+  size: Vector
 }
 
-const memo = new WeakMap<TreeNode, ViewNodeWithHeight>()
+type UnresolvedViewNode = Omit<TreeNode, 'children' | 'coord'> & {
+  children: UnresolvedViewNode[]
+  size: () => Vector
+  coord: Point
+}
 
-function withSize(root: TreeNode): ViewNodeWithHeight {
+const memo = new WeakMap<TreeNode, NodeWithHeight>()
+
+function withSize(root: TreeNode): NodeWithHeight {
   if (memo.has(root)) {
     return memo.get(root)!
   }
@@ -77,8 +104,8 @@ function withSize(root: TreeNode): ViewNodeWithHeight {
     }
   }
 
-  function resolve(node: UnresolvedViewNode): ViewNodeWithHeight {
-    function dummy(node: UnresolvedViewNode): ViewNodeWithHeight {
+  function resolve(node: UnresolvedViewNode): NodeWithHeight {
+    function dummy(node: UnresolvedViewNode): NodeWithHeight {
       return {
         ...node,
         size: node.size(),
@@ -108,12 +135,27 @@ function withSize(root: TreeNode): ViewNodeWithHeight {
 }
 
 function layOut(root: TreeNode, direction: NodeDirection): TreeNodeView {
-  function layOutInternal(root: ViewNodeWithHeight): TreeNodeView {
+  function dummy(node: NodeWithHeight): TreeNodeView {
+    return {
+      ...node,
+      children: node.children.map(dummy),
+      summaries: [],
+    }
+  }
+
+  function layOutInternal(root: NodeWithHeight): { node: TreeNodeView; rect: Rect } {
     // records total height of nodes above current node
     let accHeight = 0
 
+    let rect = {
+      top: root.coord[1] - root.size[1] / 2 - config.summaryPadding,
+      bottom: root.coord[1] + root.size[1] / 2 + config.summaryPadding,
+      left: root.coord[0] - root.size[0] / 2 - config.summaryPadding,
+      right: root.coord[0] + root.size[0] / 2 + config.summaryPadding,
+    }
+
     if (!root.expanded) {
-      return root
+      return { node: { ...root, children: root.children.map(dummy), summaries: [] }, rect }
     }
 
     for (const node of root.children) {
@@ -124,13 +166,27 @@ function layOut(root: TreeNode, direction: NodeDirection): TreeNodeView {
       accHeight += node.height + config.verticalSpan
     }
 
+    let children = root.children.map(layOutInternal)
+    let childrenNodes = children.map((child, i) => ({
+      ...child.node,
+      summaries: root.children[i].summaries.map((summary, i) => ({
+        ...summary,
+        rect: surrounds(children.slice(i, i + summary.count).map((child) => child.rect)),
+      })),
+    }))
+    rect = surrounds([rect].concat(children.map((child) => child.rect)))
+
     return {
-      ...root,
-      children: root.children.map(layOutInternal),
+      node: {
+        ...root,
+        children: childrenNodes,
+        summaries: root.summaries.map((summary) => ({ ...summary, rect })),
+      },
+      rect,
     }
   }
 
-  return layOutInternal(withSize(root))
+  return layOutInternal(withSize(root)).node
 }
 
 export function layOutRoot(root: TreeNode): TreeNodeView {
