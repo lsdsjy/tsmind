@@ -24,3 +24,10 @@ export function newNode(opt: NewNodeOptions = {}): TreeNode {
     ...(opt.root ? { coord: opt.coord } : {}),
   }
 }
+
+export function toggleExpanded(to?: boolean) {
+  return <T extends TreeNode | TreeNodeView>(node: T): T => ({
+    ...node,
+    expanded: to ?? !node.expanded,
+  })
+}

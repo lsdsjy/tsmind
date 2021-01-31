@@ -1,6 +1,6 @@
 import { useForceUpdate } from 'observable-hooks'
 import { append, init, lensProp, over } from 'ramda'
-import React, { useCallback, useMemo, useRef, useState } from 'react'
+import React, { SetStateAction, useCallback, useMemo, useRef } from 'react'
 import { last, map, materialize, skipWhile, takeUntil, tap } from 'rxjs/operators'
 import './App.css'
 import { CanvasContext } from './canvas-context'
@@ -11,17 +11,24 @@ import { Canvas, CanvasView, NodePath, Point, TreeNodeView, Vector } from './mod
 import { getDropTarget } from './util/dnd'
 import { mousemove$, mouseup$ } from './util/event'
 import { layOutCanvas } from './util/layout'
+import { toggleExpanded } from './util/node'
 import { pathDelete, pathGet, pathInsert, pathOver } from './util/path'
 import { edist } from './util/point'
+import { tapOnce } from './util/tap-once'
 
 let undoStack: Canvas[] = []
 let redoStack: Canvas[] = []
 
 function App() {
-  const [canvas, setCanvas] = useState(mockCanvas)
-  const view = useMemo(() => layOutCanvas(canvas), [canvas])
+  const canvas = useRef<Canvas>(mockCanvas)
+  const view = useMemo(() => layOutCanvas(canvas.current), [canvas.current])
   const preview = useRef<CanvasView>()
   const forceUpdate = useForceUpdate()
+
+  function setCanvas(value: SetStateAction<Canvas>) {
+    canvas.current = typeof value === 'function' ? value(canvas.current) : value
+    forceUpdate()
+  }
 
   function setPreview(value: typeof preview['current']) {
     preview.current = value
@@ -40,9 +47,16 @@ function App() {
 
       dragCoord$
         .pipe(
-          map((coord) => [coord, getDropTarget(preview.current ?? pathDelete(view, path), coord)] as const),
+          tapOnce(() => {
+            preview.current = pathDelete(view, path)
+            canvas.current = pathDelete(canvas.current, path)
+          }),
+          map((coord) => [coord, getDropTarget(preview.current!, coord)] as const),
           tap(([coord, target]) => {
-            let previewCanvas = pathDelete(canvas, path)
+            if (target) {
+              canvas.current = pathOver(canvas.current, init(target), toggleExpanded(true))
+            }
+            let previewCanvas = canvas.current
             if (target) {
               previewCanvas = pathInsert(previewCanvas, target, {
                 ...source,
@@ -63,7 +77,7 @@ function App() {
         .subscribe((notification) => {
           if (notification.kind === 'N') {
             update((oldCanvas) => {
-              let canvas = pathDelete(oldCanvas, path)
+              let canvas = oldCanvas
               const [, target] = notification.value!
               if (target) {
                 canvas = pathOver(canvas, init(target), (parent) => ({ ...parent, expanded: true }))
@@ -80,11 +94,11 @@ function App() {
           setPreview(undefined)
         })
     },
-    [canvas]
+    [canvas.current]
   )
 
   const update: typeof setCanvas = (args: any) => {
-    undoStack.push(canvas)
+    undoStack.push(canvas.current)
     redoStack = []
     return setCanvas(args)
   }
@@ -92,7 +106,7 @@ function App() {
   function undo() {
     const last = undoStack.pop()
     if (last) {
-      redoStack.push(canvas)
+      redoStack.push(canvas.current)
       setCanvas(last)
     }
   }
@@ -100,13 +114,13 @@ function App() {
   function redo() {
     const next = redoStack.pop()
     if (next) {
-      undoStack.push(canvas)
+      undoStack.push(canvas.current)
       setCanvas(next)
     }
   }
 
   return (
-    <CanvasContext.Provider value={{ canvas, setCanvas: update }}>
+    <CanvasContext.Provider value={{ canvas: canvas.current, setCanvas: update }}>
       <DndContext.Provider value={{ startDragging }}>
         <div className="App">
           <button onClick={undo}>undo</button>

@@ -24,7 +24,7 @@ export function getDropTarget(rootView: CanvasView, coord: Point): NodePath | un
     node.children.filter((child) => !child.dropPreview).forEach((child, i) => traverse(child, [...path, i]))
   }
 
-  rootView.children.forEach((child, i) => traverse(child, [i]))
+  rootView.children.filter((child) => !child.dropPreview).forEach((child, i) => traverse(child, [i]))
 
   return candidate.path
 }
