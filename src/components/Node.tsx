@@ -154,9 +154,10 @@ export const Node = React.memo(function (props: NodeProps) {
                         complete: () => {
                           const [, y] = getCoord(0, endY)
                           const endIndex = Math.max(
-                            summaryIndex,
+                            childIndex,
                             findLastIndex((child) => child.coord[1] <= y, node.children)
                           )
+                          self!.style.height = `${initialHeight}px`
                           setCanvas((canvas) =>
                             pathOver(
                               canvas,
