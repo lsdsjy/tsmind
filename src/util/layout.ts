@@ -49,7 +49,18 @@ function withSize(root: TreeNode): ViewNodeWithHeight {
   }
 
   function helper(node: TreeNode): UnresolvedViewNode {
-    const children = node.children.map(helper)
+    /**
+     * collapsed children don't need actual size
+     */
+    function dummy(node: TreeNode): UnresolvedViewNode {
+      return {
+        coord: [0, 0],
+        ...node,
+        children: node.children.map(dummy),
+        size: () => [0, 0],
+      }
+    }
+    const children = node.children.map(node.expanded ? helper : dummy)
 
     const measurer = getMeasurer(node)
 
@@ -67,7 +78,15 @@ function withSize(root: TreeNode): ViewNodeWithHeight {
   }
 
   function resolve(node: UnresolvedViewNode): ViewNodeWithHeight {
-    const children = node.children.map(resolve)
+    function dummy(node: UnresolvedViewNode): ViewNodeWithHeight {
+      return {
+        ...node,
+        size: node.size(),
+        height: 0,
+        children: node.children.map(dummy),
+      }
+    }
+    const children = node.children.map(node.expanded ? resolve : dummy)
     const size = node.size()
 
     // total height of this subtree
@@ -92,6 +111,11 @@ function layOut(root: TreeNode, direction: NodeDirection): TreeNodeView {
   function layOutInternal(root: ViewNodeWithHeight): TreeNodeView {
     // records total height of nodes above current node
     let accHeight = 0
+
+    if (!root.expanded) {
+      return root
+    }
+
     for (const node of root.children) {
       node.coord = [
         root.coord[0] + (root.size[0] / 2 + config.horizontalSpan + node.size[0] / 2) * (direction === 'left' ? -1 : 1),
