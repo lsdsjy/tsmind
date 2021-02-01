@@ -22,11 +22,6 @@ export function MindMap(props: { canvas: CanvasView }) {
     <div
       ref={ref}
       style={{ width, height }}
-      onMouseDown={(e) => {
-        if (e.detail > 1) {
-          e.preventDefault()
-        }
-      }}
       onDoubleClick={(e) => {
         if (e.target !== ref.current) return
         e.preventDefault()

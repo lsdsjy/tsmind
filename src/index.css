@@ -36,7 +36,6 @@ code {
 
 .node .editor {
   width: 100%;
-  user-select: contain;
   line-height: 100%;
 }
 
