@@ -31,7 +31,13 @@ interface NodeProps {
 const NodeBody = React.memo(function (props: NodeBodyProps) {
   const { node, editing } = props
   const [start, setStart] = useState(node.label.length)
+  const composing = useRef(false)
   const el = useRef<HTMLDivElement | null>(null)
+
+  function changeText(text: string) {
+    saveCaret()
+    props.onChange({ ...node, label: text })
+  }
 
   function saveCaret() {
     setStart(window.getSelection()?.getRangeAt(0).startOffset ?? 0)
@@ -62,8 +68,16 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
       suppressContentEditableWarning
       onBlur={props.onBlur}
       onInput={(e) => {
-        saveCaret()
-        props.onChange({ ...node, label: e.currentTarget.innerText })
+        if (!composing.current) {
+          changeText(e.currentTarget.innerText)
+        }
+      }}
+      onCompositionStart={() => {
+        composing.current = true
+      }}
+      onCompositionEnd={(e) => {
+        composing.current = false
+        changeText(node.label + e.data)
       }}
     >
       {node.label || ' ' /* use a space to visualize editing */}
