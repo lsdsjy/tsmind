@@ -5,6 +5,8 @@ export type NodeId = string
 export interface Summary {
   /**
    * number of continuous top-level nodes in this summary
+   * FIXME: children of root may not have the same direction
+   * FIXME: ensure children are sorted by y
    */
   count: number
   label: string

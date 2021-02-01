@@ -166,9 +166,10 @@ export const Node = React.memo(function (props: NodeProps) {
                         },
                         complete: () => {
                           const [, y] = getCoord(0, endY)
+                          const children = node.children.filter((c) => c.direction === child.direction)
                           const endIndex = Math.max(
                             childIndex,
-                            findLastIndex((child) => child.coord[1] <= y, node.children)
+                            findLastIndex((child) => child.coord[1] <= y, children)
                           )
                           self!.style.height = `${initialHeight}px`
                           setCanvas((canvas) =>
