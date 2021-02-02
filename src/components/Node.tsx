@@ -157,13 +157,13 @@ export const Node = React.memo(function (props: NodeProps) {
                       e.stopPropagation()
                       const childIndex = i
                       const self = (e.target as HTMLDivElement).parentElement
-                      const startY = e.clientY
+                      const startY = getCoord(0, e.clientY)[1]
                       const initialHeight = self!.getBoundingClientRect().height
-                      let endY = e.clientY
+                      let endY = getCoord(0, e.clientY)[1]
                       mousemove$.pipe(takeUntil(mouseup$)).subscribe({
                         next: (e) => {
-                          self!.style.height = `${e.clientY - startY + initialHeight}px`
-                          endY = e.clientY
+                          self!.style.height = `${getCoord(0, e.clientY)[1] - startY + initialHeight}px`
+                          endY = getCoord(0, e.clientY)[1]
                         },
                         complete: () => {
                           const [, y] = getCoord(0, endY)
