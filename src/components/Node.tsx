@@ -75,8 +75,9 @@ const NodeBody = React.memo(function (props: NodeBodyProps) {
       onCompositionStart={() => {
         composing.current = true
       }}
-      onCompositionEnd={() => {
+      onCompositionEnd={(e) => {
         composing.current = false
+        changeText(e.currentTarget.innerText)
       }}
     >
       {node.label || ' ' /* use a space to visualize editing */}
