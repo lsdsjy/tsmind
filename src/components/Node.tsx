@@ -1,5 +1,5 @@
 import { findLastIndex, lensPath, over } from 'ramda'
-import React, { CSSProperties, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { CSSProperties, useLayoutEffect } from 'react'
 import { takeUntil } from 'rxjs/operators'
 import { CanvasContext } from '../canvas-context'
 import { DndContext } from '../dnd-context'

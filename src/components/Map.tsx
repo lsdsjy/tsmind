@@ -1,5 +1,5 @@
 import { append, lensPath, over } from 'ramda'
-import React, { useCallback, useContext, useRef } from 'react'
+import React from 'react'
 import { CanvasContext } from '../canvas-context'
 import { config } from '../config'
 import { CanvasView } from '../model'

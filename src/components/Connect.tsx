@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { config } from '../config'
 import { Point, TreeNodeView } from '../model'
 import { add, repr, sub } from '../util/point'
